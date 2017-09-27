@@ -1,0 +1,24 @@
+Line: 
+tr "A-Z" "a-z" < wcExample.cpp | tr -cs "a-z" '\012' | sort | uniq -c | sort -nr | head -1 
+
+tr
+"A-Z"
+"a-z"
+<
+wxExample.cpp
+|
+tr
+-cs
+"a-z"
+'\012'
+|
+sort
+|
+uniq
+-c
+|
+sort
+-nr
+|
+head
+-1
