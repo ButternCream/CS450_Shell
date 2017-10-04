@@ -1,0 +1,17 @@
+total 100
+drwx------ 2 smitchel smitchel  4096 Oct  4 13:26 .
+drwx------ 4 smitchel smitchel  4096 Oct  4 12:25 ..
+-rwx------ 1 smitchel smitchel   104 Sep 27 09:23 constants.h
+-rwx------ 1 smitchel smitchel   842 Sep 28 09:43 hello.txt
+-rwx------ 1 smitchel smitchel  2730 Oct  4 13:26 main.c
+-rw------- 1 smitchel smitchel  8496 Oct  4 13:26 main.o
+-rwx------ 1 smitchel smitchel   555 Sep 27 13:26 makefile
+-rwx------ 1 smitchel smitchel   608 Sep 27 09:23 parsetools.c
+-rwx------ 1 smitchel smitchel   213 Sep 27 09:23 parsetools.h
+-rw------- 1 smitchel smitchel  3736 Oct  4 12:04 parsetools.o
+-rwx------ 1 smitchel smitchel  1669 Sep 27 09:23 pipe_demo.c
+-rw------- 1 smitchel smitchel  8536 Oct  4 12:04 pipe_demo.o
+-rwx------ 1 smitchel smitchel 11680 Oct  4 12:04 pipe_demo.x
+-rwx------ 1 smitchel smitchel 16712 Oct  4 13:26 pipes.x
+-rw------- 1 smitchel smitchel     0 Oct  4 13:26 test.txt
+-rwx------ 1 smitchel smitchel   143 Oct  4 13:25 t.txt

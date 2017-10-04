@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <stdbool.h>
 
 void execute_command(char*[],char*[], char, int);  
 
@@ -28,35 +29,25 @@ int main() {
             if (strcmp(line_words[i], ">") == 0)
             {
                 execute_command(line_words, argv, '>', i);
-                pos = i;
                 break;
             }
-            if (strcmp(line_words[i], "<") == 0)
+            else if (strcmp(line_words[i], "<") == 0)
             {
                 execute_command(line_words, argv, '<', i);
-                pos = i;
+                break;
+            }
+            else if (num_words == 1 && fork() == 0)
+            {
+                execlp(line_words[0], line_words[0], (char*)NULL);
+                break;
+            }
+            else if (i == num_words - 1 && num_words > 1)
+            {
+                argv[i] =  line_words[i];
+                execute_command(line_words, argv, '\0', i);
                 break;
             }
             argv[i] =  line_words[i];
-        }
-        if (fork() == 0)
-        {
-            // Single command no args, 'ls'
-            if (num_words == 1){
-                execlp(line_words[0], line_words[0], (char*)NULL);
-            }
-            // Shit way of output redirection 'ls > hello.txt'
-            else if (pos > 0)
-            {
-                // File after the '>'
-                char* filename = line_words[pos+1];
-                //Begin reirection
-                int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-                dup2(fd, 1);
-                execvp(argv[0], argv); 
-            }
-            // Single command with args 'ls -al'
-            execvp(line_words[0], line_words);
         }
         /* execvp for dynamic arguments
         char *argv[] = {"ls", "-l", "-t", 0};
@@ -73,18 +64,55 @@ void execute_command(char* line[], char* arguments[], char operator, int positio
     if (operator == '>' && fork() == 0)
     {
         char* filename = line[position+1];
-        //Begin reirection
+        
+        /*printf("Filename = %s\n", filename);
+        printf("Position = %s\n", line[position]);
+        printf("Args = %s\n", arguments[0]);
+        printf("Args = %s\n", arguments[1]);
+        printf("Args = %s\n", arguments[2]);
+        *///Begin reirection
         int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0777);
         //stdout
         dup2(fd, 1);
-        execvp(arguments[0], arguments); 
+        close(fd);
+        if (position > 1)
+            execvp(arguments[0], arguments); 
+        else
+            execlp(line[0], line[0], (char*)NULL);
     }
+    // wc -l < test.txt
     else if (operator == '<' && fork() == 0)
     {
+        
         char* filename = line[position+1];
+
+        /*printf("Filename = %s\n", filename);
+        printf("Position = %s\n", line[position]);
+        printf("Args = %s\n", arguments[0]);
+        printf("Args = %s\n", arguments[1]);
+        printf("Args = %s\n", arguments[2]);
+        */
         int fd = open(filename, O_RDONLY);
         // stdin
         dup2(fd, 0);
-        execvp(arguments[0], arguments);
+        close(fd);
+        if (position > 1)
+        {
+            execvp(arguments[0], arguments);
+        }
+        else
+        {
+            execlp(line[0], line[0], (char*)NULL);
+        }
+    }
+    // exmaple ls -al
+    else if (operator == '\0' && fork() == 0)
+    {
+        /*printf("Position = %s\n", line[position]);
+        printf("Args = %s\n", arguments[0]);
+        printf("Args = %s\n", arguments[1]);
+        printf("Args = %s\n", arguments[2]);
+        */
+        execvp(line[0], line);
     }
 }
