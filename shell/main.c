@@ -113,11 +113,6 @@ void execute_command(char* line[], char* arguments[], char operator, int positio
     // exmaple ls -al
     else if (operator == '\0' && fork() == 0)
     {
-        /*printf("Position = %s\n", line[position]);
-        printf("Args = %s\n", arguments[0]);
-        printf("Args = %s\n", arguments[1]);
-        printf("Args = %s\n", arguments[2]);
-        */
         execvp(line[0], line);
     }
     else if (operator == '|')
