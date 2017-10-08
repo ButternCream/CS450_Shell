@@ -8,7 +8,13 @@
 #include <fcntl.h>
 #include <stdbool.h>
 
-void execute_command(char*[],char*[], char, int);  
+void create_command(char*[], char*[], int start, int end);
+void exec_output(char*[], char*);
+void exec_input(char*[], char*);
+void exec_pipe(char*[], char*[]);
+int nextDelimPos(char*[],int, int);
+bool isDelim(char*);
+
 
 int main() {
     // Buffer for reading one line of input
@@ -28,113 +34,127 @@ int main() {
             // Testing only output redirection. Need to fix for adding pipes and nested redirection
             if (strcmp(line_words[i], ">") == 0)
             {
-                execute_command(line_words, argv, '>', i);
+                // Build the command before the '>'
+                char* built[MAX_LINE_WORDS+1];
+                create_command(built, line_words, 0, i);
+                // Execute output redirection
+                exec_output(built, line_words[i+1]);
                 break;
             }
             else if (strcmp(line_words[i], "<") == 0)
             {
-                execute_command(line_words, argv, '<', i);
+                // Build the command before the '<'
+                char* built[MAX_LINE_WORDS+1];
+                create_command(built, line_words, 0, i);
+                // Execute the input redirection
+                exec_input(built, line_words[i+1]);
                 break;
             }
             else if (strcmp(line_words[i], "|") == 0)
             {
-                execute_command(line_words, argv, '|', i);
+                // Create arrays for both pipe commands
+                char* built[MAX_LINE_WORDS+1];
+                char* built2[MAX_LINE_WORDS+1];
+                // Create command on left side of |
+                create_command(built, line_words, 0, i);
+                // Find the next delimiter (<,>,|)
+                int next = nextDelimPos(line_words, num_words, i+1);  
+                // Create the command on right side of |
+                create_command(built2, line_words, i+1, next);
+                // Execute pipes with both commands
+                exec_pipe(built, built2);
                 break;
             }
-            else if (num_words == 1 && fork() == 0)
+            else if (i == num_words - 1 && fork() == 0)
             {
-                execlp(line_words[0], line_words[0], (char*)NULL);
+                // Build the command
+                char* built[MAX_LINE_WORDS+1];
+                create_command(built, line_words,0,num_words);
+                // Execute and single command, i.e ls, ls -al, who, etc...
+                execvp(built[0], built);
                 break;
             }
-            else if (i == num_words - 1 && num_words > 1)
-            {
-                argv[i] =  line_words[i];
-                execute_command(line_words, argv, '\0', i);
-                break;
-            }
-            argv[i] =  line_words[i];
         }
-        /* execvp for dynamic arguments
-        char *argv[] = {"ls", "-l", "-t", 0};
-        execvp(argv[0], argv);
-        */
     }
 
     return 0;
 }
 
-void execute_command(char* line[], char* arguments[], char operator, int position)
+// Checks if a string is a delimeter
+bool isDelim(char* c)
 {
-    // ls -al > test.txt
-    if (operator == '>' && fork() == 0)
+        if (strcmp(c, ">") == 0) return true;
+        if (strcmp(c, "<") == 0) return true;
+        if (strcmp(c, "|") == 0) return true;
+        return false;
+}
+
+// Find the next delimeter position given the starting index
+int nextDelimPos(char* words[], int num_words, int start)
+{
+    int temp = start;
+    while (temp < num_words && !isDelim(words[temp]))
     {
-        char* filename = line[position+1];
-        
-        /*printf("Filename = %s\n", filename);
-        printf("Position = %s\n", line[position]);
-        printf("Args = %s\n", arguments[0]);
-        printf("Args = %s\n", arguments[1]);
-        printf("Args = %s\n", arguments[2]);
-        *///Begin reirection
+        temp++;
+    }  
+    return temp;
+}
+
+// Create commands array for execvp with the first param 'built' since it complains about returning
+// pointers, example built = ["ls", "-al"]
+void create_command(char* built[], char* words[], int start, int end)
+{
+    for(int i = 0; i < end-start; i++)
+    {
+        built[i] = words[start+i];
+    }
+}
+
+// Execute single output redirection
+void exec_output(char* command[], char* filename)
+{
+    if (fork() == 0)
+    {
         int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0777);
         //stdout
         dup2(fd, 1);
         close(fd);
-        if (position > 1)
-            execvp(arguments[0], arguments); 
-        else
-            execlp(line[0], line[0], (char*)NULL);
+        execvp(command[0], command); 
     }
-    // wc -l < test.txt
-    else if (operator == '<' && fork() == 0)
-    {
-        
-        char* filename = line[position+1];
+}
 
-        /*printf("Filename = %s\n", filename);
-        printf("Position = %s\n", line[position]);
-        printf("Args = %s\n", arguments[0]);
-        printf("Args = %s\n", arguments[1]);
-        printf("Args = %s\n", arguments[2]);
-        */
-        int fd = open(filename, O_RDONLY);
-        // stdin
-        dup2(fd, 0);
+// Execute single input redirection
+void exec_input(char* command[], char* input)
+{
+    if (fork() == 0)
+    {
+        int fd = open(input, O_RDONLY);
+        dup2(fd,0);
         close(fd);
-        if (position > 1)
-        {
-            execvp(arguments[0], arguments);
-        }
-        else
-        {
-            execlp(line[0], line[0], (char*)NULL);
-        }
+        execvp(command[0], command);
     }
-    // exmaple ls -al
-    else if (operator == '\0' && fork() == 0)
+}
+
+// Execute single pipe
+void exec_pipe(char* writer[], char* reader[])
+{
+    int pfd[2];
+    pipe(pfd);
+    if (fork() == 0)
     {
-        execvp(line[0], line);
-    }
-    else if (operator == '|')
-    {
-        int pfd[2];
-        pipe(pfd);
-        if (fork() == 0)
-        {
-            dup2(pfd[0], 0);
-            close(pfd[0]);
-            close(pfd[1]);
-            execlp(line[position+1], line[position+1], (char*)NULL);
-        }
-        if (fork() == 0)
-        {
-            dup2(pfd[1], 1);
-            close(pfd[0]);
-            close(pfd[1]);
-            execvp(arguments[0], arguments);
-        }
+        dup2(pfd[0], 0);
         close(pfd[0]);
         close(pfd[1]);
-        wait(NULL);
+        execvp(reader[0], reader);
     }
+    if (fork() == 0)
+    {
+        dup2(pfd[1], 1);
+        close(pfd[0]);
+        close(pfd[1]);
+        execvp(writer[0], writer);
+    }
+    close(pfd[0]);
+    close(pfd[1]);
+    wait(NULL);
 }
