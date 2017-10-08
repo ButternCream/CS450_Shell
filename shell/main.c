@@ -36,6 +36,11 @@ int main() {
                 execute_command(line_words, argv, '<', i);
                 break;
             }
+            else if (strcmp(line_words[i], "|") == 0)
+            {
+                execute_command(line_words, argv, '|', i);
+                break;
+            }
             else if (num_words == 1 && fork() == 0)
             {
                 execlp(line_words[0], line_words[0], (char*)NULL);
@@ -58,9 +63,9 @@ int main() {
     return 0;
 }
 
-// Might be an option, still testing
 void execute_command(char* line[], char* arguments[], char operator, int position)
 {
+    // ls -al > test.txt
     if (operator == '>' && fork() == 0)
     {
         char* filename = line[position+1];
@@ -114,5 +119,27 @@ void execute_command(char* line[], char* arguments[], char operator, int positio
         printf("Args = %s\n", arguments[2]);
         */
         execvp(line[0], line);
+    }
+    else if (operator == '|')
+    {
+        int pfd[2];
+        pipe(pfd);
+        if (fork() == 0)
+        {
+            dup2(pfd[0], 0);
+            close(pfd[0]);
+            close(pfd[1]);
+            execlp(line[position+1], line[position+1], (char*)NULL);
+        }
+        if (fork() == 0)
+        {
+            dup2(pfd[1], 1);
+            close(pfd[0]);
+            close(pfd[1]);
+            execvp(arguments[0], arguments);
+        }
+        close(pfd[0]);
+        close(pfd[1]);
+        wait(NULL);
     }
 }
